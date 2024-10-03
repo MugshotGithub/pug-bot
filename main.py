@@ -59,7 +59,7 @@ async def _isAdmin(userId):
 
     return False
 
-@tree.command(name="setup-pugs", description="Initialised all channels for PUG lobbies",guild=discord.Object(id=guildId))
+@tree.command(name="setup-pugs", description="Initialised all channels for PUG lobbies", guild=discord.Object(id=guildId))
 async def setup_pug(interaction):
     await interaction.response.defer(ephemeral=True)
     if not await _isAdmin(interaction.user.id):
@@ -71,14 +71,10 @@ async def setup_pug(interaction):
 
     signUpChannel = await category.create_text_channel("sign-up")
 
+    await signUpChannel.set_permissions(guild.get_member(bot.user.id), read_messages=True, send_messages=True)
     await signUpChannel.set_permissions(guild.default_role, read_messages=True, send_messages=False)
-    await signUpChannel.set_permissions(guild.get_member(bot.user.id), read_messages=True, send_messages=False)
 
     discussionChannel = await category.create_text_channel("pug-discussion")
-
-    if not os.path.exists("lobbyData.json"):
-        with open("lobbyData.json.txt", "w") as file:
-            file.write("{}")
 
     # TODO: Send sign up message HERE
 
@@ -93,8 +89,40 @@ async def setup_pug(interaction):
         "blue": blueTeamChannel.id
     }
 
+    conn = sqlite3.connect('database.db', autocommit=True)
+    cursor = conn.cursor()
+
+    cursor.execute('INSERT OR IGNORE INTO channels (name,id) VALUES (?,?);', ("category", category.id))
+    for name, channelId in channelIds.items():
+        cursor.execute('INSERT OR IGNORE INTO channels (name,id) VALUES (?,?);', (name, channelId))
+
+    conn.close()
+    await interaction.followup.send(f"Set up pug channels")
 
 
+@tree.command(name="clear-pugs", description="Clear all channels for PUG lobbies",
+              guild=discord.Object(id=guildId))
+async def clear_pug(interaction):
+    await interaction.response.defer(ephemeral=True)
+    if not await _isAdmin(interaction.user.id):
+        await interaction.followup.send(f"You do not have permission to use this command")
+        return
+    guild = bot.get_guild(guildId) if bot.get_guild(guildId) is not None else await bot.fetch_guild(guildId)
+
+    conn = sqlite3.connect('database.db', autocommit=True)
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT id FROM channels')
+
+    channelIds = cursor.fetchall()
+    for channelId in channelIds:
+        channelId = channelId[0]
+        channel = await guild.fetch_channel(channelId)
+        await channel.delete()
+        cursor.execute('DELETE FROM channels WHERE id == (?)', (channelId,))
+
+    conn.close()
+    await interaction.followup.send(f"Cleared pug channels")
 
 
 #########################################################

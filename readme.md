@@ -7,6 +7,13 @@ Set up your admin roles using commands:
  - /add_admin_role
  - /add_admin_user
  - /remove_admin_user
+ - /list-admin-roles
+ - /list-admin-users
+ - /clear-admin-list
+
+Set up channels and remove channels using commands also:
+ - /setup-pugs
+ - /clear-pugs
 
 
 Admins can either be a role, where it will apply to all users with that role, or a single user.
